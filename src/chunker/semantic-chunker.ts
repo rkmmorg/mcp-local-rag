@@ -21,8 +21,6 @@ export interface SemanticChunkerConfig {
   c: number
   /** Minimum group size in characters before a split is allowed (default: 50) */
   minChunkLength: number
-  /** When true, reject files that produce a single chunk shorter than minChunkLength (default: false) */
-  skipShortFiles: boolean
 }
 
 /**
@@ -97,7 +95,6 @@ const DEFAULT_SEMANTIC_CHUNKER_CONFIG: SemanticChunkerConfig = {
   initConst: 1.5,
   c: 0.9,
   minChunkLength: DEFAULT_MIN_CHUNK_LENGTH,
-  skipShortFiles: false,
 }
 
 // ============================================
@@ -164,16 +161,6 @@ export class SemanticChunker {
         })
         chunkIndex++
       }
-    }
-
-    // When skipShortFiles is enabled, reject files that produce a single chunk
-    // shorter than minChunkLength (allows users to skip short files)
-    if (
-      this.config.skipShortFiles &&
-      chunks.length === 1 &&
-      chunks[0]!.text.length < this.config.minChunkLength
-    ) {
-      return []
     }
 
     return chunks

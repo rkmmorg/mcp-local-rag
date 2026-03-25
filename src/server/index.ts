@@ -92,8 +92,7 @@ export class RAGServer {
       cacheDir: config.cacheDir,
     })
     const chunkMinLength = config.chunkMinLength ?? DEFAULT_MIN_CHUNK_LENGTH
-    const skipShortFiles = config.skipShortFiles ?? false
-    this.chunker = new SemanticChunker({ minChunkLength: chunkMinLength, skipShortFiles })
+    this.chunker = new SemanticChunker({ minChunkLength: chunkMinLength })
     this.parser = new DocumentParser({
       baseDir: config.baseDir,
       maxFileSize: config.maxFileSize,

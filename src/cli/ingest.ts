@@ -34,7 +34,6 @@ interface IngestConfig {
   modelName: string
   maxFileSize: number
   chunkMinLength: number
-  skipShortFiles: boolean
 }
 
 interface IngestSummary {
@@ -225,8 +224,6 @@ export function resolveConfig(
     process.exit(1)
   }
 
-  const skipShortFiles = process.env['SKIP_SHORT_FILES'] === 'true'
-
   return {
     dbPath: globalConfig.dbPath,
     cacheDir: globalConfig.cacheDir,
@@ -234,7 +231,6 @@ export function resolveConfig(
     baseDir,
     maxFileSize,
     chunkMinLength,
-    skipShortFiles,
   }
 }
 
@@ -439,10 +435,7 @@ export async function runIngest(args: string[], globalOptions: GlobalOptions = {
     baseDir: config.baseDir,
     maxFileSize: config.maxFileSize,
   })
-  const chunker = new SemanticChunker({
-    minChunkLength: config.chunkMinLength,
-    skipShortFiles: config.skipShortFiles,
-  })
+  const chunker = new SemanticChunker({ minChunkLength: config.chunkMinLength })
   const embedder = createEmbedder(globalConfig)
   const vectorStore = createVectorStore(globalConfig)
   await vectorStore.initialize()

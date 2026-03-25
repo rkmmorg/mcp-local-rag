@@ -309,7 +309,6 @@ Both MCP and CLI use the same environment variables. The CLI also accepts equiva
 | `MODEL_NAME` | `--model-name` | `Xenova/all-MiniLM-L6-v2` | HuggingFace model ID ([available models](https://huggingface.co/models?library=transformers.js&pipeline_tag=feature-extraction)) |
 | `MAX_FILE_SIZE` | `--max-file-size` | `104857600` (100MB) | Maximum file size in bytes |
 | `CHUNK_MIN_LENGTH` | `--chunk-min-length` | `50` | Minimum group size in characters during chunking (1-10000) |
-| `SKIP_SHORT_FILES` | — | `false` | When `true`, skip files that produce a single chunk shorter than `CHUNK_MIN_LENGTH` |
 
 **Model choice tips:**
 - Multilingual docs → e.g., `onnx-community/embeddinggemma-300m-ONNX` (100+ languages)
