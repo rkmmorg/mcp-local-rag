@@ -27,6 +27,8 @@ export interface RAGServerConfig {
   maxFiles?: number
   /** Minimum chunk length in characters for semantic chunking (default: 50) */
   chunkMinLength?: number
+  /** Skip files that produce a single chunk shorter than chunkMinLength (default: false) */
+  skipShortFiles?: boolean
   /** Configuration validation warnings to surface to users via MCP annotations */
   configWarnings?: string[]
 }

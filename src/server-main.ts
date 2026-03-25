@@ -134,6 +134,9 @@ export async function startServer(): Promise<void> {
     if (chunkMinLength.warning) {
       configWarnings.push(chunkMinLength.warning)
     }
+    if (process.env['SKIP_SHORT_FILES'] === 'true') {
+      config.skipShortFiles = true
+    }
 
     if (configWarnings.length > 0) {
       config.configWarnings = configWarnings

@@ -19,8 +19,10 @@ export interface SemanticChunkerConfig {
   initConst: number
   /** Scaling constant for threshold calculation (default: 0.9) */
   c: number
-  /** Minimum chunk length in characters (default: 50) */
+  /** Minimum group size in characters before a split is allowed (default: 50) */
   minChunkLength: number
+  /** When true, reject files that produce a single chunk shorter than minChunkLength (default: false) */
+  skipShortFiles: boolean
 }
 
 /**
@@ -57,7 +59,7 @@ const MAX_SENTENCES = 15
  * 3. Only decoration characters (----, ====, etc.) -> garbage
  * 4. Single character repeated >80% of text -> garbage
  *
- * Note: Applied after minChunkLength filter
+ * Note: Applied after semantic grouping
  *
  * @param text - Chunk text to check
  * @returns true if chunk is garbage and should be removed
@@ -87,11 +89,15 @@ export function isGarbageChunk(text: string): boolean {
 // Default Configuration
 // ============================================
 
+/** Exported so ingest.ts and server/index.ts share one source of truth. */
+export const DEFAULT_MIN_CHUNK_LENGTH = 50
+
 const DEFAULT_SEMANTIC_CHUNKER_CONFIG: SemanticChunkerConfig = {
   hardThreshold: 0.6,
   initConst: 1.5,
   c: 0.9,
-  minChunkLength: 50,
+  minChunkLength: DEFAULT_MIN_CHUNK_LENGTH,
+  skipShortFiles: false,
 }
 
 // ============================================
@@ -149,14 +155,25 @@ export class SemanticChunker {
     for (const group of sentenceGroups) {
       const chunkText = group.join(' ')
 
-      // Filter out chunks that are too short or garbage
-      if (chunkText.length >= this.config.minChunkLength && !isGarbageChunk(chunkText)) {
+      // Filter out garbage chunks (empty, decoration-only)
+      // minChunkLength is enforced during grouping, not here
+      if (!isGarbageChunk(chunkText)) {
         chunks.push({
           text: chunkText,
           index: chunkIndex,
         })
         chunkIndex++
       }
+    }
+
+    // When skipShortFiles is enabled, reject files that produce a single chunk
+    // shorter than minChunkLength (allows users to skip short files)
+    if (
+      this.config.skipShortFiles &&
+      chunks.length === 1 &&
+      chunks[0]!.text.length < this.config.minChunkLength
+    ) {
+      return []
     }
 
     return chunks
@@ -194,6 +211,10 @@ export class SemanticChunker {
           // Add to current group
           currentGroup.push(sentence)
           currentGroupEmbeddings.push(embedding)
+        } else if (currentGroup.join(' ').length < this.config.minChunkLength) {
+          // Group too short to stand alone — keep adding (same spirit as init_const)
+          currentGroup.push(sentence)
+          currentGroupEmbeddings.push(embedding)
         } else {
           // Start new group
           groups.push([...currentGroup])
@@ -215,6 +236,10 @@ export class SemanticChunker {
         if (shouldAdd) {
           currentGroup.push(sentence)
           currentGroupEmbeddings.push(embedding)
+        } else if (currentGroup.join(' ').length < this.config.minChunkLength) {
+          // Group too short to stand alone — keep adding
+          currentGroup.push(sentence)
+          currentGroupEmbeddings.push(embedding)
         } else {
           // Start new group
           groups.push([...currentGroup])
@@ -224,9 +249,14 @@ export class SemanticChunker {
       }
     }
 
-    // Don't forget the last group
+    // Handle the last group
     if (currentGroup.length > 0) {
-      groups.push(currentGroup)
+      if (groups.length > 0 && currentGroup.join(' ').length < this.config.minChunkLength) {
+        // Trailing group too short — fold into previous group
+        groups[groups.length - 1]!.push(...currentGroup)
+      } else {
+        groups.push(currentGroup)
+      }
     }
 
     return groups

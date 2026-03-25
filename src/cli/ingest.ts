@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto'
 import { opendir, stat } from 'node:fs/promises'
 import { extname, join, resolve } from 'node:path'
 
-import { SemanticChunker } from '../chunker/index.js'
+import { DEFAULT_MIN_CHUNK_LENGTH, SemanticChunker } from '../chunker/index.js'
 import type { Embedder } from '../embedder/index.js'
 import { DocumentParser, SUPPORTED_EXTENSIONS } from '../parser/index.js'
 import type { VectorChunk, VectorStore } from '../vectordb/index.js'
@@ -34,6 +34,7 @@ interface IngestConfig {
   modelName: string
   maxFileSize: number
   chunkMinLength: number
+  skipShortFiles: boolean
 }
 
 interface IngestSummary {
@@ -60,7 +61,7 @@ interface ParsedArgs {
 
 const INGEST_DEFAULTS = {
   maxFileSize: 104857600,
-  chunkMinLength: 50,
+  chunkMinLength: DEFAULT_MIN_CHUNK_LENGTH,
 } as const
 
 // ============================================
@@ -74,7 +75,7 @@ Ingest a single file or all supported files under a directory.
 Options:
   --base-dir <path>      Base directory for documents (default: cwd)
   --max-file-size <n>    Max file size in bytes (default: ${INGEST_DEFAULTS.maxFileSize})
-  --chunk-min-length <n> Minimum chunk length in characters (default: ${INGEST_DEFAULTS.chunkMinLength})
+  --chunk-min-length <n> Minimum group size in characters during chunking (default: ${INGEST_DEFAULTS.chunkMinLength})
   -h, --help             Show this help
 
 Global options (must appear before "ingest"):
@@ -224,6 +225,8 @@ export function resolveConfig(
     process.exit(1)
   }
 
+  const skipShortFiles = process.env['SKIP_SHORT_FILES'] === 'true'
+
   return {
     dbPath: globalConfig.dbPath,
     cacheDir: globalConfig.cacheDir,
@@ -231,6 +234,7 @@ export function resolveConfig(
     baseDir,
     maxFileSize,
     chunkMinLength,
+    skipShortFiles,
   }
 }
 
@@ -435,7 +439,10 @@ export async function runIngest(args: string[], globalOptions: GlobalOptions = {
     baseDir: config.baseDir,
     maxFileSize: config.maxFileSize,
   })
-  const chunker = new SemanticChunker({ minChunkLength: config.chunkMinLength })
+  const chunker = new SemanticChunker({
+    minChunkLength: config.chunkMinLength,
+    skipShortFiles: config.skipShortFiles,
+  })
   const embedder = createEmbedder(globalConfig)
   const vectorStore = createVectorStore(globalConfig)
   await vectorStore.initialize()
