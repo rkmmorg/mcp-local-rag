@@ -278,7 +278,7 @@ describe('SemanticChunker minChunkLength', () => {
     // Every sentence must appear in some chunk
     const allText = chunks.map((c) => c.text).join(' ')
     for (const sentence of sentences) {
-      expect(allText).toContain(sentence.slice(0, 20))
+      expect(allText).toContain(sentence)
     }
   })
 })

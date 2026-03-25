@@ -240,7 +240,10 @@ export class SemanticChunker {
     if (currentGroup.length > 0) {
       if (groups.length > 0 && currentGroup.join(' ').length < this.config.minChunkLength) {
         // Trailing group too short — fold into previous group
-        groups[groups.length - 1]!.push(...currentGroup)
+        const lastGroup = groups[groups.length - 1]
+        if (lastGroup) {
+          lastGroup.push(...currentGroup)
+        }
       } else {
         groups.push(currentGroup)
       }
