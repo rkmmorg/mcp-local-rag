@@ -245,7 +245,7 @@ describe('VectorStore', () => {
     })
 
     describe('Japanese text support', () => {
-      it('should find Japanese documents with ngram tokenizer', async () => {
+      it('should find Japanese documents via vector search (FTS uses simple tokenizer)', async () => {
         const store = new VectorStore({
           dbPath: testDbPath,
           tableName: 'chunks',
@@ -272,15 +272,12 @@ describe('VectorStore', () => {
         await store.insertChunks([japaneseDoc])
         await store.insertChunks([englishDoc])
 
-        // Search with Japanese keyword
+        // Search with Japanese keyword — simple tokenizer won't boost CJK text,
+        // but vector search still finds the Japanese document via embeddings.
         const queryVector = createNormalizedVector(1)
         const results = await store.search(queryVector, '依存性注入', 10)
 
-        // Verify Japanese document is found (ngram tokenizer works)
-        const foundJapanese = results.some((r) => r.filePath === '/test/japanese.md')
-        expect(foundJapanese).toBe(true)
-
-        // Verify both documents are returned
+        // Both documents are returned via vector search
         expect(results).toHaveLength(2)
       })
     })

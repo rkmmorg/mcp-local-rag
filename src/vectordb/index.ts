@@ -178,17 +178,15 @@ export class VectorStore {
       return
     }
 
-    // Create new FTS index with ngram tokenizer for multilingual support
-    // - min=2: Capture Japanese bi-grams (e.g., "東京", "設計")
-    // - max=3: Balance between precision and index size
-    // - prefixOnly=false: Generate ngrams from all positions for proper CJK support
+    // Create new FTS index with simple (word-level) tokenizer for precise keyword matching.
+    // Splits on whitespace/punctuation so proper nouns and keywords match as whole words.
+    // Stemming improves recall (e.g., "running" → "run") without adding noise.
+    // Trade-off: CJK text won't be tokenized well, but vector search (primary) handles CJK.
     await this.table.createIndex('text', {
       config: Index.fts({
-        baseTokenizer: 'ngram',
-        ngramMinLength: 2,
-        ngramMaxLength: 3,
-        prefixOnly: false,
-        stem: false,
+        baseTokenizer: 'simple',
+        stem: true,
+        lowercase: true,
       }),
       name: FTS_INDEX_NAME,
     })
