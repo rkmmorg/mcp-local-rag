@@ -45,3 +45,8 @@ tmp/
 CLAUDE.md
 .claude/
 docs/
+
+references/
+
+*lancedb*
+*models*
