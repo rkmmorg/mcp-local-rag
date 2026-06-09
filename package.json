@@ -69,6 +69,7 @@
     "jsdom": "^27.4.0",
     "mammoth": "^1.11.0",
     "mupdf": "^1.27.0",
+    "openai": "^6.42.0",
     "turndown": "7.2.2"
   },
   "devDependencies": {
@@ -77,9 +78,9 @@
     "@types/node": "^25.3.5",
     "@types/turndown": "5.0.6",
     "husky": "^9.1.7",
+    "knip": "^5.61.2",
     "lint-staged": "^16.3.2",
     "madge": "^8.0.0",
-    "knip": "^5.61.2",
     "tsc-alias": "^1.8.16",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",

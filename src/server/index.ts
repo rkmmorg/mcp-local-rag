@@ -13,7 +13,7 @@ import {
   McpError,
 } from '@modelcontextprotocol/sdk/types.js'
 import { DEFAULT_MIN_CHUNK_LENGTH, SemanticChunker } from '../chunker/index.js'
-import { Embedder } from '../embedder/index.js'
+import { AzureEmbedder, Embedder } from '../embedder/index.js'
 import { parseHtml } from '../parser/html-parser.js'
 import { DocumentParser, SUPPORTED_EXTENSIONS } from '../parser/index.js'
 import { extractMarkdownTitle, extractTxtTitle } from '../parser/title-extractor.js'
@@ -47,7 +47,7 @@ import type {
 export class RAGServer {
   private readonly server: Server
   private readonly vectorStore: VectorStore
-  private readonly embedder: Embedder
+  private readonly embedder: Embedder | AzureEmbedder
   private readonly chunker: SemanticChunker
   private readonly parser: DocumentParser
   private readonly dbPath: string
@@ -55,12 +55,15 @@ export class RAGServer {
   // Used by handleListFiles filter to exclude system-managed directories
   private readonly excludePaths: string[]
   private readonly configWarnings: string[]
+  private readonly minChunkLength: number
   private queryWarningsShown = false
+  private readonly expectedEmbeddingDim: number
 
   constructor(config: RAGServerConfig) {
     this.dbPath = config.dbPath
     this.baseDir = config.baseDir
     this.configWarnings = config.configWarnings ?? []
+    this.minChunkLength = config.chunkMinLength ?? DEFAULT_MIN_CHUNK_LENGTH
     this.excludePaths = [`${resolve(config.dbPath)}/`, `${resolve(config.cacheDir)}/`]
     this.server = new Server(
       { name: 'rag-mcp-server', version: '1.0.0' },
@@ -86,13 +89,30 @@ export class RAGServer {
       vectorStoreConfig.maxFiles = config.maxFiles
     }
     this.vectorStore = new VectorStore(vectorStoreConfig)
-    this.embedder = new Embedder({
-      modelPath: config.modelName,
-      batchSize: 16,
-      cacheDir: config.cacheDir,
-    })
-    const chunkMinLength = config.chunkMinLength ?? DEFAULT_MIN_CHUNK_LENGTH
-    this.chunker = new SemanticChunker({ minChunkLength: chunkMinLength })
+    this.expectedEmbeddingDim = config.embeddingProvider === 'azure' ? 1536 : 384
+    if (config.embeddingProvider === 'azure') {
+      if (!config.azureApiKey || !config.azureEndpoint) {
+        throw new Error(
+          'AZURE_EMBEDDING_API_KEY and AZURE_EMBEDDING_ENDPOINT are required when EMBEDDING_PROVIDER=azure'
+        )
+      }
+      this.embedder = new AzureEmbedder({
+        apiKey: config.azureApiKey,
+        endpoint: config.azureEndpoint,
+        deployment: config.azureDeployment ?? 'text-embedding-3-small',
+      })
+      console.error('RAGServer: Using Azure OpenAI embedder (text-embedding-3-small)')
+    } else {
+      this.embedder = new Embedder({
+        modelPath: config.modelName,
+        batchSize: 16,
+        cacheDir: config.cacheDir,
+      })
+      console.error('RAGServer: Using local Xenova embedder')
+    }
+    this.chunker = new SemanticChunker(
+      config.chunkMinLength !== undefined ? { minChunkLength: config.chunkMinLength } : {}
+    )
     this.parser = new DocumentParser({
       baseDir: config.baseDir,
       maxFileSize: config.maxFileSize,
@@ -169,6 +189,7 @@ export class RAGServer {
    */
   async initialize(): Promise<void> {
     await this.vectorStore.initialize()
+    await this.vectorStore.checkVectorDimension(this.expectedEmbeddingDim)
     console.error('RAGServer initialized')
   }
 
@@ -265,7 +286,7 @@ export class RAGServer {
       if (chunks.length === 0) {
         throw new McpError(
           ErrorCode.InvalidParams,
-          `No chunks generated from file: ${args.filePath}. The file may be empty or contain only non-text content. Existing data has been preserved.`
+          `No chunks generated from file: ${args.filePath}. The file may be empty or all content was filtered (minimum ${this.minChunkLength} characters required). Existing data has been preserved.`
         )
       }
 

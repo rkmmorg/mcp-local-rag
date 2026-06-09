@@ -25,10 +25,18 @@ export interface RAGServerConfig {
   hybridWeight?: number
   /** Maximum number of files to keep in search results (optional) */
   maxFiles?: number
-  /** Minimum chunk length in characters for semantic chunking (default: 50) */
+  /** Minimum chunk length in characters (optional, default: 50) */
   chunkMinLength?: number
   /** Configuration validation warnings to surface to users via MCP annotations */
   configWarnings?: string[]
+  /** Embedding provider: 'local' (Xenova) or 'azure' (Azure OpenAI) */
+  embeddingProvider?: 'local' | 'azure'
+  /** Azure OpenAI API key (required when embeddingProvider is 'azure') */
+  azureApiKey?: string
+  /** Azure OpenAI endpoint (required when embeddingProvider is 'azure') */
+  azureEndpoint?: string
+  /** Azure OpenAI embedding deployment name (default: 'text-embedding-3-small') */
+  azureDeployment?: string
 }
 
 /**
