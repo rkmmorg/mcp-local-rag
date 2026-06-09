@@ -152,7 +152,8 @@ export async function startServer(): Promise<void> {
     }
 
     console.error('Starting RAG MCP Server...')
-    console.error('Configuration:', config)
+    const { azureApiKey: _key, ...safeConfig } = config
+    console.error('Configuration:', safeConfig)
 
     // Start RAGServer
     const server = new RAGServer(config)

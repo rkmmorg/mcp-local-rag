@@ -88,6 +88,12 @@ export class RAGServer {
       vectorStoreConfig.maxFiles = config.maxFiles
     }
     this.vectorStore = new VectorStore(vectorStoreConfig)
+    // Warn about vector dimension mismatch when switching providers
+    const expectedDim = config.embeddingProvider === 'azure' ? 1536 : 384
+    console.error(
+      `RAGServer: Embedding provider "${config.embeddingProvider ?? 'local'}" expects ${expectedDim}-dim vectors. ` +
+        'If switching providers on an existing database, delete the database and re-ingest.'
+    )
     if (config.embeddingProvider === 'azure') {
       if (!config.azureApiKey || !config.azureEndpoint) {
         throw new Error(
