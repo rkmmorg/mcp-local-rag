@@ -57,6 +57,7 @@ export class RAGServer {
   private readonly configWarnings: string[]
   private readonly minChunkLength: number
   private queryWarningsShown = false
+  private readonly expectedEmbeddingDim: number
 
   constructor(config: RAGServerConfig) {
     this.dbPath = config.dbPath
@@ -88,12 +89,7 @@ export class RAGServer {
       vectorStoreConfig.maxFiles = config.maxFiles
     }
     this.vectorStore = new VectorStore(vectorStoreConfig)
-    // Warn about vector dimension mismatch when switching providers
-    const expectedDim = config.embeddingProvider === 'azure' ? 1536 : 384
-    console.error(
-      `RAGServer: Embedding provider "${config.embeddingProvider ?? 'local'}" expects ${expectedDim}-dim vectors. ` +
-        'If switching providers on an existing database, delete the database and re-ingest.'
-    )
+    this.expectedEmbeddingDim = config.embeddingProvider === 'azure' ? 1536 : 384
     if (config.embeddingProvider === 'azure') {
       if (!config.azureApiKey || !config.azureEndpoint) {
         throw new Error(
@@ -193,6 +189,7 @@ export class RAGServer {
    */
   async initialize(): Promise<void> {
     await this.vectorStore.initialize()
+    await this.vectorStore.checkVectorDimension(this.expectedEmbeddingDim)
     console.error('RAGServer initialized')
   }
 

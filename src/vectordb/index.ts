@@ -207,6 +207,33 @@ export class VectorStore {
    * Uses table.addColumns() API for top-level column additions.
    * Idempotent: checks for column existence before adding.
    */
+  /**
+   * Validate that stored vector dimension matches the active embedder
+   * Throws DatabaseError if mismatch detected — prevents silent wrong results
+   */
+  async checkVectorDimension(expectedDim: number): Promise<void> {
+    if (!this.table) {
+      return
+    }
+    const schema = await this.table.schema()
+    const vectorField = schema.fields.find((f: { name: string }) => f.name === 'vector')
+    if (!vectorField) {
+      return
+    }
+    const typeStr = vectorField.type.toString()
+    const match = typeStr.match(/(\d+)/)
+    if (!match) {
+      return
+    }
+    const storedDim = Number.parseInt(match[1], 10)
+    if (storedDim !== expectedDim) {
+      throw new DatabaseError(
+        `Vector dimension mismatch: database has ${storedDim}-dim vectors but active embedder expects ${expectedDim}-dim. ` +
+          `Delete the database at "${this.config.dbPath}" and re-ingest all documents.`
+      )
+    }
+    console.error(`VectorStore: Vector dimension check passed (${storedDim}-dim) ✓`)
+  }
   private async ensureSchemaVersion(): Promise<void> {
     if (!this.table) {
       return
