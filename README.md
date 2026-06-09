@@ -354,6 +354,50 @@ claude mcp add local-rag --scope user \
   -- npx -y mcp-local-rag
 ```
 
+### Azure Cloud Embedding (Optional)
+
+By default, mcp-local-rag runs fully offline using the local `Xenova/all-MiniLM-L6-v2` model (384-dim). You can switch to Azure OpenAI `text-embedding-3-small` (1536-dim) for higher quality embeddings.
+
+**Set these environment variables:**
+
+| Environment Variable | Description |
+|---------------------|-------------|
+| `EMBEDDING_PROVIDER` | Set to `azure` to use Azure OpenAI (default: `local`) |
+| `AZURE_EMBEDDING_API_KEY` | Your Azure OpenAI API key |
+| `AZURE_EMBEDDING_ENDPOINT` | Your Azure OpenAI endpoint URL |
+| `AZURE_EMBEDDING_DEPLOYMENT` | Deployment name (default: `text-embedding-3-small`) |
+
+**For Cursor** — update your `mcp.json`:
+```json
+{
+  "mcpServers": {
+    "local-rag": {
+      "command": "npx",
+      "args": ["-y", "mcp-local-rag"],
+      "env": {
+        "BASE_DIR": "/path/to/your/documents",
+        "EMBEDDING_PROVIDER": "azure",
+        "AZURE_EMBEDDING_API_KEY": "your-api-key",
+        "AZURE_EMBEDDING_ENDPOINT": "https://your-resource.openai.azure.com/",
+        "AZURE_EMBEDDING_DEPLOYMENT": "text-embedding-3-small"
+      }
+    }
+  }
+}
+```
+**For Claude Code:**
+```bash
+claude mcp add local-rag --scope user \
+  --env BASE_DIR=/path/to/your/documents \
+  --env EMBEDDING_PROVIDER=azure \
+  --env AZURE_EMBEDDING_API_KEY=your-api-key \
+  --env AZURE_EMBEDDING_ENDPOINT=https://your-resource.openai.azure.com/ \
+  --env AZURE_EMBEDDING_DEPLOYMENT=text-embedding-3-small \
+  -- npx -y mcp-local-rag
+```
+
+> ⚠️ **Important:** Azure (`text-embedding-3-small`) produces 1536-dim vectors; local Xenova produces 384-dim vectors. **These are incompatible.** If switching providers on an existing database, delete `DB_PATH` and re-ingest all documents. The server will refuse to start if a dimension mismatch is detected.
+
 ### First Run
 
 The embedding model (~90MB) downloads on first use. Takes 1-2 minutes, then works offline.
