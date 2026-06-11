@@ -5,6 +5,7 @@
     "module": "node16",
     "lib": ["ES2022"],
     "types": ["node"],
+    "ignoreDeprecations": "6.0",
     "baseUrl": ".",  // Use project root as reference
     "paths": {
       "src/*": ["src/*"]
